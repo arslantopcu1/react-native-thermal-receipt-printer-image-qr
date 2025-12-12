@@ -342,10 +342,13 @@ public class NetPrinterAdapter implements PrinterAdapter {
                 // Do a line feed, if not the printing will resume on the same line
                 printerOutputStream.write(LINE_FEED);
             }
-            printerOutputStream.write(SET_LINE_SPACE_32);
-            printerOutputStream.write(LINE_FEED);
+           printerOutputStream.write(SET_LINE_SPACE_32);
+           printerOutputStream.write(LINE_FEED);
+           printerOutputStream.write(LINE_FEED);
+           printerOutputStream.write(LINE_FEED);
 
-            printerOutputStream.flush();
+           printerOutputStream.write(new byte[] { 0x1D, 0x56, 0x00 }); // CUT
+           printerOutputStream.flush();
         } catch (IOException e) {
             Log.e(LOG_TAG, "failed to print data");
             e.printStackTrace();
