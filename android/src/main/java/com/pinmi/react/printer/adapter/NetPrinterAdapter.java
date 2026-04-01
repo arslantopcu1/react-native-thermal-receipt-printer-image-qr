@@ -259,7 +259,9 @@ public class NetPrinterAdapter implements PrinterAdapter {
 
     @Override
     public void printImageData(final String imageUrl, int imageWidth, int imageHeight, Callback errorCallback) {
-         if (bitmapImage == null) {
+        final Bitmap bitmapImage = getBitmapFromURL(imageUrl);
+
+        if (bitmapImage == null) {
             errorCallback.invoke("image not found");
             return;
         }
@@ -270,7 +272,6 @@ public class NetPrinterAdapter implements PrinterAdapter {
         }
 
         final Socket socket = this.mSocket;
-
         try {
             int[][] pixels = getPixelsSlow(bitmapImage, imageWidth, imageHeight);
 
@@ -294,14 +295,10 @@ public class NetPrinterAdapter implements PrinterAdapter {
                 // Do a line feed, if not the printing will resume on the same line
                 printerOutputStream.write(LINE_FEED);
             }
-           printerOutputStream.write(SET_LINE_SPACE_32);
-           printerOutputStream.write(LINE_FEED);
-           printerOutputStream.write(LINE_FEED);
-           printerOutputStream.write(LINE_FEED);
+            printerOutputStream.write(SET_LINE_SPACE_32);
+            printerOutputStream.write(LINE_FEED);
 
-           printerOutputStream.write(new byte[] { 0x1D, 0x56, 0x00 }); // CUT
-           printerOutputStream.write(new byte[] { 0x1B, 0x70, 0x00, 0x3C, 0xFF] }); // OPEN_DRAWER 
-           printerOutputStream.flush();
+            printerOutputStream.flush();
         } catch (IOException e) {
             Log.e(LOG_TAG, "failed to print data");
             e.printStackTrace();
