@@ -351,6 +351,13 @@ public class USBPrinterAdapter implements PrinterAdapter {
                 mUsbDeviceConnection.bulkTransfer(mEndPoint, LINE_FEED, LINE_FEED.length, 100000);
             }
 
+            byte[] feedLines = new byte[]{0x1B, 0x64, 0x03};
+            mUsbDeviceConnection.bulkTransfer(mEndPoint, feedLines, feedLines.length, 100000);
+
+            // 0x1D, 0x56, 0x42, 0x00 komutu: Besle ve tam kes
+            byte[] cutCommand = new byte[]{0x1D, 0x56, 0x42, 0x00};
+            mUsbDeviceConnection.bulkTransfer(mEndPoint, cutCommand, cutCommand.length, 100000);
+
             mUsbDeviceConnection.bulkTransfer(mEndPoint, SET_LINE_SPACE_32, SET_LINE_SPACE_32.length, 100000);
             mUsbDeviceConnection.bulkTransfer(mEndPoint, LINE_FEED, LINE_FEED.length, 100000);
         } else {
