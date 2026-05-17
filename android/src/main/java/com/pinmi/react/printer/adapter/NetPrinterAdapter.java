@@ -305,6 +305,7 @@ public class NetPrinterAdapter implements PrinterAdapter {
         }
     }
 
+    
     @Override
     public void printImageBase64(final Bitmap bitmapImage, int imageWidth, int imageHeight, Callback errorCallback) {
         if (bitmapImage == null) {
@@ -321,61 +322,38 @@ public class NetPrinterAdapter implements PrinterAdapter {
 
         try {
             int[][] pixels = getPixelsSlow(bitmapImage, imageWidth, imageHeight);
+
             OutputStream printerOutputStream = socket.getOutputStream();
 
             printerOutputStream.write(SET_LINE_SPACE_24);
             printerOutputStream.write(CENTER_ALIGN);
 
             for (int y = 0; y < pixels.length; y += 24) {
+                // Like I said before, when done sending data,
+                // the printer will resume to normal text printing
                 printerOutputStream.write(SELECT_BIT_IMAGE_MODE);
-
-                // nL ve nH geni?lik tan?mlamas?
-                printerOutputStream.write(new byte[]{
-                    (byte) (0x00ff & pixels[y].length),
-                    (byte) ((0xff00 & pixels[y].length) >> 8)
-                });
-
-                
-                byte[] bulkRowData = new byte[pixels[y].length * 3];
-                int byteIndex = 0;
-
+                // Set nL and nH based on the width of the image
+                printerOutputStream.write(new byte[]{(byte) (0x00ff & pixels[y].length)
+                        , (byte) ((0xff00 & pixels[y].length) >> 8)});
                 for (int x = 0; x < pixels[y].length; x++) {
-                    byte[] slice = recollectSlice(y, x, pixels);
-                    System.arraycopy(slice, 0, bulkRowData, byteIndex, slice.length);
-                    byteIndex += slice.length;
+                    // for each stripe, recollect 3 bytes (3 bytes = 24 bits)
+                    printerOutputStream.write(recollectSlice(y, x, pixels));
                 }
 
-                // 
-                printerOutputStream.write(bulkRowData);
+                // Do a line feed, if not the printing will resume on the same line
                 printerOutputStream.write(LINE_FEED);
-
-                // Paketleri
-                printerOutputStream.flush();
-
-               
-                try {
-                    Thread.sleep(25);
-                } catch (InterruptedException e) {
-                    Log.e(LOG_TAG, "Sleep interrupted", e);
-                }
             }
+           printerOutputStream.write(SET_LINE_SPACE_32);
+           printerOutputStream.write(LINE_FEED);
+           printerOutputStream.write(LINE_FEED);
+           printerOutputStream.write(LINE_FEED);
 
-            printerOutputStream.write(SET_LINE_SPACE_32);
-
-            // Rongdata cihazlarda kesim noktas? resme 
-            byte[] feedLines = new byte[]{0x1B, 0x64, 0x03}; // 3 sat?r bo?luk besle
-            printerOutputStream.write(feedLines);
-
-            // Rongdata uyumlu "Besle ve Kes" komutu (Daha
-            printerOutputStream.write(new byte[] { 0x1D, 0x56, 0x42, 0x00 });
-
-            // Son verileri 
-            printerOutputStream.flush();
-
+           printerOutputStream.write(new byte[] { 0x1D, 0x56, 0x00 }); // CUT
+           printerOutputStream.flush();
         } catch (IOException e) {
             Log.e(LOG_TAG, "failed to print data");
             e.printStackTrace();
-            errorCallback.invoke("IO Exception: " + e.getMessage());
         }
     }
+    
 }
