@@ -331,35 +331,31 @@ public class USBPrinterAdapter implements PrinterAdapter {
             b = mUsbDeviceConnection.bulkTransfer(mEndPoint, CENTER_ALIGN, CENTER_ALIGN.length, 100000);
 
             for (int y = 0; y < pixels.length; y += 24) {
+                // Like I said before, when done sending data,
+                // the printer will resume to normal text printing
                 mUsbDeviceConnection.bulkTransfer(mEndPoint, SELECT_BIT_IMAGE_MODE, SELECT_BIT_IMAGE_MODE.length, 100000);
 
-                byte[] row = new byte[]{(byte) (0x00ff & pixels[y].length), (byte) ((0xff00 & pixels[y].length) >> 8)};
+                // Set nL and nH based on the width of the image
+                byte[] row = new byte[]{(byte) (0x00ff & pixels[y].length)
+                        , (byte) ((0xff00 & pixels[y].length) >> 8)};
+
                 mUsbDeviceConnection.bulkTransfer(mEndPoint, row, row.length, 100000);
 
-                
-                byte[] bulkRowData = new byte[pixels[y].length * 3];
-                int byteIndex = 0;
-
                 for (int x = 0; x < pixels[y].length; x++) {
+                    // for each stripe, recollect 3 bytes (3 bytes = 24 bits)
                     byte[] slice = recollectSlice(y, x, pixels);
-                    System.arraycopy(slice, 0, bulkRowData, byteIndex, slice.length);
-                    byteIndex += slice.length;
+                    mUsbDeviceConnection.bulkTransfer(mEndPoint, slice, slice.length, 100000);
                 }
 
-               
-                mUsbDeviceConnection.bulkTransfer(mEndPoint, bulkRowData, bulkRowData.length, 100000);
-
+                // Do a line feed, if not the printing will resume on the same line
                 mUsbDeviceConnection.bulkTransfer(mEndPoint, LINE_FEED, LINE_FEED.length, 100000);
-
-                
-                try { Thread.sleep(15); } catch (InterruptedException ignored) {}
             }
 
-            
-            byte[] feedLines = new byte[]{0x1B, 0x64, 0x03}; 
+            // 1. Ka??d? biraz daha ilerlet 
+            byte[] feedLines = new byte[]{0x1B, 0x64, 0x03}; // 3 sat?r bo?luk besle
             mUsbDeviceConnection.bulkTransfer(mEndPoint, feedLines, feedLines.length, 100000);
 
-            
+            // 3. KA?IDI KES (Cut)
             // 0x1D, 0x56, 0x42, 0x00 komutu: Besle ve tam kes
             byte[] cutCommand = new byte[]{0x1D, 0x56, 0x42, 0x00};
             mUsbDeviceConnection.bulkTransfer(mEndPoint, cutCommand, cutCommand.length, 100000);
