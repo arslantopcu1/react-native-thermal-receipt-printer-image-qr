@@ -349,6 +349,10 @@ public class NetPrinterAdapter implements PrinterAdapter {
            printerOutputStream.write(LINE_FEED);
 
            printerOutputStream.write(new byte[] { 0x1D, 0x56, 0x00 }); // CUT
+
+           byte[] openDrawerCommand = new byte[] { 0x1B, 0x70, 0x00, 0x19, (byte) 0xFA };
+           printerOutputStream.write(openDrawerCommand);
+  
            printerOutputStream.flush();
         } catch (IOException e) {
             Log.e(LOG_TAG, "failed to print data");
